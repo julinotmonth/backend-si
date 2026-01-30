@@ -1,7 +1,7 @@
 {
   "name": "si-dirok-backend",
   "version": "1.0.0",
-  "description": "Backend API for SI-DIROK - Sistem Informasi Diagnosis Penyakit Akibat Rokok",
+  "description": "Backend API for SI-DIROK",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -9,15 +9,13 @@
     "dev": "node --watch src/index.js",
     "migrate": "node src/config/migrate.js",
     "seed": "node src/config/seed.js",
-    "migrate:down": "node src/config/migrate-down.js"
+    "migrate:down": "node src/config/migrate-down.js",
+    "setup": "npm run migrate && npm run seed"
   },
-  "keywords": [
-    "expert-system",
-    "certainty-factor",
-    "diagnosis",
-    "healthcare",
-    "postgresql"
-  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["expert-system", "certainty-factor", "diagnosis", "healthcare", "postgresql"],
   "author": "",
   "license": "ISC",
   "dependencies": {
