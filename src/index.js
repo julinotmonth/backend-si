@@ -1,47 +1,49 @@
 /**
- * SI-DIROK Backend API
- * Sistem Informasi Diagnosis Penyakit Akibat Rokok
- * 
- * Express.js REST API with SQLite database
+ * SI-DIROK Backend Server
+ * Express.js with PostgreSQL
  */
 
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { initDatabase } from './config/database.js';
+import routes from './routes/index.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
-// Load environment variables
 dotenv.config();
 
-// Import database initialization
-import { initDatabase } from './config/database.js';
-
-// Import routes
-import {
-  authRoutes,
-  symptomsRoutes,
-  diseasesRoutes,
-  rulesRoutes,
-  diagnosisRoutes,
-  educationRoutes,
-  adminRoutes,
-  contactRoutes
-} from './routes/index.js';
-
-// Import middleware
-import { notFound, errorHandler } from './middleware/errorHandler.js';
-
-// Initialize Express app
 const app = express();
+const PORT = process.env.PORT || 3000;
+
+// CORS Configuration - Updated for Production
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ].filter(Boolean);
+    
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all origins in development
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
 
 // Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
-app.use(express.json());
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging in development
+// Request logging (development only)
 if (process.env.NODE_ENV === 'development') {
   app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -49,102 +51,44 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/symptoms', symptomsRoutes);
-app.use('/api/diseases', diseasesRoutes);
-app.use('/api/rules', rulesRoutes);
-app.use('/api/diagnosis', diagnosisRoutes);
-app.use('/api/education', educationRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/contact', contactRoutes);
-
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'SI-DIROK API is running',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  });
-});
-
-// API documentation endpoint
-app.get('/api', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Welcome to SI-DIROK API',
+    message: 'SI-DIROK API Server',
     version: '1.0.0',
-    endpoints: {
-      auth: {
-        'POST /api/auth/register': 'Register new user',
-        'POST /api/auth/login': 'Login user',
-        'GET /api/auth/me': 'Get current user profile',
-        'PUT /api/auth/profile': 'Update profile',
-        'PUT /api/auth/password': 'Change password'
-      },
-      symptoms: {
-        'GET /api/symptoms': 'Get all symptoms',
-        'GET /api/symptoms/categories': 'Get symptom categories',
-        'GET /api/symptoms/:id': 'Get symptom by ID'
-      },
-      diseases: {
-        'GET /api/diseases': 'Get all diseases',
-        'GET /api/diseases/:id': 'Get disease by ID'
-      },
-      rules: {
-        'GET /api/rules': 'Get all rules',
-        'GET /api/rules/:id': 'Get rule by ID'
-      },
-      diagnosis: {
-        'POST /api/diagnosis': 'Process diagnosis',
-        'GET /api/diagnosis/history': 'Get diagnosis history'
-      },
-      education: {
-        'GET /api/education': 'Get all articles',
-        'GET /api/education/:idOrSlug': 'Get article'
-      },
-      contact: {
-        'POST /api/contact': 'Submit contact message'
-      }
-    }
+    status: 'running',
+    timestamp: new Date().toISOString()
   });
 });
 
-// Error handling
-app.use(notFound);
+// Health check for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
+
+// API Routes
+app.use('/api', routes);
+
+// Error Handlers
+app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start server
-const PORT = process.env.PORT || 3000;
-
 const startServer = async () => {
   try {
-    // Initialize database before starting server
+    // Initialize database connection
     await initDatabase();
-    
-    app.listen(PORT, () => {
-      console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║   🏥 SI-DIROK Backend API                                 ║
-║   Sistem Informasi Diagnosis Penyakit Akibat Rokok        ║
-║                                                           ║
-║   Server running on: http://localhost:${PORT}              ║
-║   Environment: ${(process.env.NODE_ENV || 'development').padEnd(28)}║
-║                                                           ║
-║   API Documentation: http://localhost:${PORT}/api          ║
-║   Health Check: http://localhost:${PORT}/api/health        ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
-      `);
+    console.log('✅ Database connected');
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 SI-DIROK Backend running on port ${PORT}`);
+      console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };
 
 startServer();
-
-export default app;
