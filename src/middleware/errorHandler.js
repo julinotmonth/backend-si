@@ -4,15 +4,20 @@
 
 /**
  * Not Found Handler
+ * Handles 404 errors for undefined routes
  */
-export const notFound = (req, res, next) => {
+export const notFoundHandler = (req, res, next) => {
   const error = new Error(`Endpoint tidak ditemukan: ${req.originalUrl}`);
   res.status(404);
   next(error);
 };
 
+// Alias for backward compatibility
+export const notFound = notFoundHandler;
+
 /**
  * Global Error Handler
+ * Catches all errors and sends appropriate response
  */
 export const errorHandler = (err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
@@ -31,6 +36,7 @@ export const errorHandler = (err, req, res, next) => {
 
 /**
  * Validation Error Handler
+ * Formats express-validator errors for API response
  */
 export const validationErrorHandler = (errors) => {
   return errors.array().map(error => ({
@@ -41,6 +47,7 @@ export const validationErrorHandler = (errors) => {
 
 export default {
   notFound,
+  notFoundHandler,
   errorHandler,
   validationErrorHandler
 };
